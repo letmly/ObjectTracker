@@ -7,11 +7,11 @@ def process():
 
     result = track_obj(video_path, obj_class)
 
-    if result is None:
+    print(f"Результат обработки:\n{result[0]}\n")
+    if not result[1]:
         print(f"Ни один {obj_class} не был найден :(")
-    else:
-        print(f"Результат обработки:\n{result}")
 
 
 if __name__ == "__main__":
     process()
+
