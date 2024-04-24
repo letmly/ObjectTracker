@@ -1,6 +1,7 @@
 import os
 from tracker import names
 
+
 def get_input_data():
     v_path, obj_class = None, None
     valid_obj_classes = list(names.values())

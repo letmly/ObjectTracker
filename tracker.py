@@ -4,18 +4,22 @@ import torch
 from ultralytics import YOLO
 
 from ultralytics.utils.plotting import Annotator, colors
-from collections import defaultdict
 
 
 model = YOLO("yolov8n.pt")
-if torch.cuda.is_available():
-    device = torch.device('cuda:0')
-    model.to(device)
-
 names = model.model.names
 
 
 def track_obj(video_path: str, obj_class: str):
+    obj_class_ind = [k for k, v in names.items() if v == obj_class][0]
+
+    if torch.cuda.is_available():
+        print("Cuda доступен")
+        device = torch.device('cuda')
+        model.to(device)
+    else:
+        print("Cuda не доступен")
+
     tracked_objects_ids = set()
 
     v_name = "Tracked_" + video_path.split('\\')[-1][:-4] + ".avi"
@@ -33,25 +37,22 @@ def track_obj(video_path: str, obj_class: str):
         success, frame = cap.read()
         if success:
             new_frame = black_fill.copy()
-            results = model.track(frame, persist=True, verbose=False)
+            results = model.track(frame, persist=True, verbose=False, classes=obj_class_ind)
             boxes = results[0].boxes.xyxy.cpu()
 
             if results[0].boxes.id is not None:
-                clss = results[0].boxes.cls.cpu().tolist()
                 track_ids = results[0].boxes.id.int().cpu().tolist()
 
-                for box, cls, track_id in zip(boxes, clss, track_ids):
-                    if names[int(cls)] == obj_class:
-                        tracked_objects_ids.add(track_id)
+                for box, track_id in zip(boxes, track_ids):
+                    tracked_objects_ids.add(track_id)
+                    # вставка поля с найденным объектом
+                    xmin, ymin, xmax, ymax = map(int, box)
+                    new_frame[ymin:ymax, xmin:xmax, 0:3] = frame[ymin:ymax, xmin:xmax, 0:3]
 
-                        # вставка поля с найденным объектом
-                        xmin, ymin, xmax, ymax = map(int, box)
-                        new_frame[ymin:ymax, xmin:xmax, 0:3] = frame[ymin:ymax, xmin:xmax, 0:3]
-
-                        # отрисовка метки объекта
-                        annotator = Annotator(new_frame, line_width=2)
-                        annotator.box_label(box, color=colors(int(cls), True),
-                                            label=f"{names[int(cls)]} ID: {track_id}")
+                for box, track_id in zip(boxes, track_ids):
+                    # отрисовка метки объекта
+                    annotator = Annotator(new_frame, line_width=2)
+                    annotator.box_label(box, color=colors(int(obj_class_ind), True), label=f"{obj_class} ID: {track_id}")
 
             result.write(new_frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
