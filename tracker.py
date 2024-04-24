@@ -1,13 +1,17 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
+import torch
 from ultralytics import YOLO
 
 from ultralytics.utils.plotting import Annotator, colors
 from collections import defaultdict
 
-track_history = defaultdict(lambda: [])
+
 model = YOLO("yolov8n.pt")
+if torch.cuda.is_available():
+    device = torch.device('cuda:0')
+    model.to(device)
+
 names = model.model.names
 
 
@@ -33,17 +37,18 @@ def track_obj(video_path: str, obj_class: str):
             boxes = results[0].boxes.xyxy.cpu()
 
             if results[0].boxes.id is not None:
-                # Extract prediction results
                 clss = results[0].boxes.cls.cpu().tolist()
                 track_ids = results[0].boxes.id.int().cpu().tolist()
 
                 for box, cls, track_id in zip(boxes, clss, track_ids):
                     if names[int(cls)] == obj_class:
                         tracked_objects_ids.add(track_id)
+
+                        # вставка поля с найденным объектом
                         xmin, ymin, xmax, ymax = map(int, box)
                         new_frame[ymin:ymax, xmin:xmax, 0:3] = frame[ymin:ymax, xmin:xmax, 0:3]
 
-                        # Annotator Init
+                        # отрисовка метки объекта
                         annotator = Annotator(new_frame, line_width=2)
                         annotator.box_label(box, color=colors(int(cls), True),
                                             label=f"{names[int(cls)]} ID: {track_id}")
