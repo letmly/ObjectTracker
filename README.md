@@ -1,3 +1,1 @@
-### Требования:
-* Python 3.11
-* CUDA 12.1 и выше
+* requirements для Win, Python 3.11 и CUDA >= 12.1
